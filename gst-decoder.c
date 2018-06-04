@@ -342,9 +342,9 @@ buf_to_fd(const struct gbm *gbm, int size, void *ptr)
 	int fd;
 
 	/* NOTE: do not actually use GBM_BO_USE_WRITE since that gets us a dumb buffer: */
-	bo = gbm_bo_create(gbm->dev, size, 1, GBM_FORMAT_R8, GBM_BO_USE_LINEAR);
+	bo = gbm_bo_create(gbm->dev, size, 1, GBM_FORMAT_C8, 0);
 
-	map = gbm_bo_map(bo, 0, 0, size, 1, GBM_BO_TRANSFER_WRITE, &stride, &map_data);
+	map = gbm_bo_map(bo, 0, 0, size, 1, 0, &stride, &map_data);
 
 	memcpy(map, ptr, size);
 
