@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	gbm = init_gbm(drm->fd, drm->mode->hdisplay, drm->mode->vdisplay,
+	gbm = init_gbm(drm->fd, 320, 240,
 			format, modifier);
 	if (!gbm) {
 		printf("failed to initialize GBM\n");

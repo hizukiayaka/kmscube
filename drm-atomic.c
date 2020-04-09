@@ -134,12 +134,12 @@ static int drm_atomic_commit(uint32_t fb_id, uint32_t flags)
 	add_plane_property(req, plane_id, "CRTC_ID", drm.crtc_id);
 	add_plane_property(req, plane_id, "SRC_X", 0);
 	add_plane_property(req, plane_id, "SRC_Y", 0);
-	add_plane_property(req, plane_id, "SRC_W", drm.mode->hdisplay << 16);
-	add_plane_property(req, plane_id, "SRC_H", drm.mode->vdisplay << 16);
+	add_plane_property(req, plane_id, "SRC_W", 320 << 16);
+	add_plane_property(req, plane_id, "SRC_H", 240 << 16);
 	add_plane_property(req, plane_id, "CRTC_X", 0);
 	add_plane_property(req, plane_id, "CRTC_Y", 0);
-	add_plane_property(req, plane_id, "CRTC_W", drm.mode->hdisplay);
-	add_plane_property(req, plane_id, "CRTC_H", drm.mode->vdisplay);
+	add_plane_property(req, plane_id, "CRTC_W", 320);
+	add_plane_property(req, plane_id, "CRTC_H", 240);
 
 	if (drm.kms_in_fence_fd != -1) {
 		add_crtc_property(req, drm.crtc_id, "OUT_FENCE_PTR",
