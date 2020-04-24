@@ -54,6 +54,10 @@ struct drm {
 	/* only used for atomic: */
 	struct plane *plane;
 	struct crtc *crtc;
+
+	struct plane *planes;
+	struct crtc *crtcs;
+
 	struct connector *connector;
 	int crtc_index;
 	int kms_in_fence_fd;
@@ -63,8 +67,16 @@ struct drm {
 	uint32_t crtc_id;
 	uint32_t connector_id;
 
+	struct connector *connectors;
+	uint32_t crtc_indexes[3];
+
+	drmModeModeInfo *(modes[3]);
+	uint32_t crtc_ids[3];
+	uint32_t connector_ids[3];
 	/* number of frames to run for: */
 	unsigned int count;
+
+	uint8_t screen_num;
 
 	int (*run)(const struct gbm *gbm, const struct egl *egl);
 };
@@ -78,6 +90,6 @@ struct drm_fb * drm_fb_get_from_bo(struct gbm_bo *bo);
 
 int init_drm(struct drm *drm, const char *device, const char *mode_str, unsigned int vrefresh, unsigned int count);
 const struct drm * init_drm_legacy(const char *device, const char *mode_str, unsigned int vrefresh, unsigned int count);
-const struct drm * init_drm_atomic(const char *device, const char *mode_str, unsigned int vrefresh, unsigned int count);
+const struct drm * init_drm_atomic(const char *device, const char *mode_str, unsigned int vrefresh, unsigned int count, uint8_t screen_num);
 
 #endif /* _DRM_COMMON_H */

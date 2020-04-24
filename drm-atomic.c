@@ -381,10 +381,13 @@ static int get_plane_id(void)
 }
 
 const struct drm * init_drm_atomic(const char *device, const char *mode_str,
-		unsigned int vrefresh, unsigned int count)
+		unsigned int vrefresh, unsigned int count, uint8_t screen_num)
 {
 	uint32_t plane_id;
+	uint32_t plane_ids[3];
 	int ret;
+
+	drm.screen_num = screen_num;
 
 	ret = init_drm(&drm, device, mode_str, vrefresh, count);
 	if (ret)
@@ -396,6 +399,8 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 		return NULL;
 	}
 
+	for (int i = 0; i < 3; i++) {
+	drm.crtc_index = drm.crtc_indexes[i];
 	ret = get_plane_id();
 	if (!ret) {
 		printf("could not find a suitable plane\n");
@@ -403,14 +408,27 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 	} else {
 		plane_id = ret;
 	}
+	plane_ids [i] = plane_id;
+	}
+	drm.crtc_index = drm.crtc_indexes[0];
 
 	/* We only do single plane to single crtc to single connector, no
 	 * fancy multi-monitor or multi-plane stuff.  So just grab the
 	 * plane/crtc/connector property info for one of each:
 	 */
+#if 0
 	drm.plane = calloc(1, sizeof(*drm.plane));
 	drm.crtc = calloc(1, sizeof(*drm.crtc));
 	drm.connector = calloc(1, sizeof(*drm.connector));
+#endif
+
+	drm.planes = (struct plane *)calloc(3, sizeof(*drm.plane));
+	drm.crtcs = (struct crtc *)calloc(3, sizeof(*drm.crtc));
+	drm.connectors = (struct connector *)calloc(3, sizeof(*drm.connector));
+
+	drm.plane = drm.planes;
+	drm.crtc = drm.crtcs;
+	drm.connector = drm.connectors;
 
 #define get_resource(type, Type, id) do { 					\
 		drm.type->type = drmModeGet##Type(drm.fd, id);			\
@@ -421,9 +439,27 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 		}								\
 	} while (0)
 
-	get_resource(plane, Plane, plane_id);
-	get_resource(crtc, Crtc, drm.crtc_id);
-	get_resource(connector, Connector, drm.connector_id);
+	get_resource(plane, Plane, plane_ids[0]);
+	get_resource(crtc, Crtc, drm.crtc_ids[0]);
+	get_resource(connector, Connector, drm.connector_ids[0]);
+
+	drm.plane++;
+	drm.crtc++;
+	drm.connector++;
+	get_resource(plane, Plane, plane_ids[1]);
+	get_resource(crtc, Crtc, drm.crtc_ids[1]);
+	get_resource(connector, Connector, drm.connector_ids[2]);
+
+	drm.plane++;
+	drm.crtc++;
+	drm.connector++;
+	get_resource(plane, Plane, plane_ids[2]);
+	get_resource(crtc, Crtc, drm.crtc_ids[2]);
+	get_resource(connector, Connector, drm.connector_ids[2]);
+
+	drm.connector = drm.connectors;
+	drm.crtc = drm.crtcs;
+	drm.plane = drm.planes;
 
 #define get_properties(type, TYPE, id) do {					\
 		uint32_t i;							\
@@ -442,9 +478,29 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 		}								\
 	} while (0)
 
-	get_properties(plane, PLANE, plane_id);
-	get_properties(crtc, CRTC, drm.crtc_id);
-	get_properties(connector, CONNECTOR, drm.connector_id);
+	get_properties(crtc, CRTC, drm.crtc_ids[0]);
+	get_properties(plane, PLANE, plane_ids[0]);
+	get_properties(connector, CONNECTOR, drm.connector_ids[0]);
+
+	drm.plane++;
+	drm.crtc++;
+	drm.connector++;
+
+	get_properties(crtc, CRTC, drm.crtc_ids[1]);
+	get_properties(plane, PLANE, plane_ids[1]);
+	get_properties(connector, CONNECTOR, drm.connector_ids[1]);
+
+	drm.plane++;
+	drm.crtc++;
+	drm.connector++;
+
+	get_properties(crtc, CRTC, drm.crtc_ids[2]);
+	get_properties(plane, PLANE, plane_ids[2]);
+	get_properties(connector, CONNECTOR, drm.connector_ids[2]);
+
+	drm.plane = drm.planes;
+	drm.crtc = drm.crtcs;
+	drm.connector = drm.connectors;
 
 	drm.run = atomic_run;
 

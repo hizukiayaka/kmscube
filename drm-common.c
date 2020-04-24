@@ -214,7 +214,10 @@ int init_drm(struct drm *drm, const char *device, const char *mode_str,
 	drmModeRes *resources;
 	drmModeConnector *connector = NULL;
 	drmModeEncoder *encoder = NULL;
+	int request_conn_type[3] = { DRM_MODE_CONNECTOR_eDP,
+	    DRM_MODE_CONNECTOR_DisplayPort, DRM_MODE_CONNECTOR_HDMIA, };
 	int i, ret, area;
+	int screen_idx = 0;
 
 	if (device) {
 		drm->fd = open(device, O_RDWR);
@@ -235,10 +238,13 @@ int init_drm(struct drm *drm, const char *device, const char *mode_str,
 		return -1;
 	}
 
+	for (screen_idx = 0; screen_idx < drm->screen_num; screen_idx++) {
+
 	/* find a connected connector: */
 	for (i = 0; i < resources->count_connectors; i++) {
 		connector = drmModeGetConnector(drm->fd, resources->connectors[i]);
-		if (connector->connection == DRM_MODE_CONNECTED) {
+		if (connector->connection == DRM_MODE_CONNECTED &&
+		    connector->connector_type == request_conn_type[screen_idx]) {
 			/* it's connected, let's use this! */
 			break;
 		}
@@ -321,9 +327,21 @@ int init_drm(struct drm *drm, const char *device, const char *mode_str,
 		}
 	}
 
+	drm->connector_id = connector->connector_id;
+	drm->modes[screen_idx] = drm->mode;
+
+	drm->crtc_ids[screen_idx] = drm->crtc_id;
+	drm->crtc_indexes[screen_idx] = drm->crtc_index;
+	drm->connector_ids[screen_idx] = drm->connector_id;
+	/* screen_idx */
+	}
+	drm->mode = drm->modes[0];
+	drm->crtc_id = drm->crtc_ids[0];
+	drm->crtc_index = drm->crtc_indexes[0];
+	drm->connector_id = drm->connector_ids[0];
+
 	drmModeFreeResources(resources);
 
-	drm->connector_id = connector->connector_id;
 	drm->count = count;
 
 	return 0;
