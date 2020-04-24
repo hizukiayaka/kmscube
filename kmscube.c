@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 	unsigned int len;
 	unsigned int vrefresh = 0;
 	unsigned int count = ~0;
-	unsigned long screen_num = 0;
+	unsigned long screen_num = 1;
 
 #ifdef HAVE_GST
 	gst_init(&argc, &argv);

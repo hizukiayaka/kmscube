@@ -38,14 +38,14 @@ static struct drm drm = {
 	.kms_out_fence_fd = -1,
 };
 
-static int add_connector_property(drmModeAtomicReq *req, uint32_t obj_id,
-					const char *name, uint64_t value)
+static int add_connector_property(drmModeAtomicReq * req, uint32_t obj_id,
+				  const char *name, uint64_t value)
 {
 	struct connector *obj = drm.connector;
 	unsigned int i;
 	int prop_id = 0;
 
-	for (i = 0 ; i < obj->props->count_props ; i++) {
+	for (i = 0; i < obj->props->count_props; i++) {
 		if (strcmp(obj->props_info[i]->name, name) == 0) {
 			prop_id = obj->props_info[i]->prop_id;
 			break;
@@ -60,14 +60,14 @@ static int add_connector_property(drmModeAtomicReq *req, uint32_t obj_id,
 	return drmModeAtomicAddProperty(req, obj_id, prop_id, value);
 }
 
-static int add_crtc_property(drmModeAtomicReq *req, uint32_t obj_id,
-				const char *name, uint64_t value)
+static int add_crtc_property(drmModeAtomicReq * req, uint32_t obj_id,
+			     const char *name, uint64_t value)
 {
 	struct crtc *obj = drm.crtc;
 	unsigned int i;
 	int prop_id = -1;
 
-	for (i = 0 ; i < obj->props->count_props ; i++) {
+	for (i = 0; i < obj->props->count_props; i++) {
 		if (strcmp(obj->props_info[i]->name, name) == 0) {
 			prop_id = obj->props_info[i]->prop_id;
 			break;
@@ -82,14 +82,14 @@ static int add_crtc_property(drmModeAtomicReq *req, uint32_t obj_id,
 	return drmModeAtomicAddProperty(req, obj_id, prop_id, value);
 }
 
-static int add_plane_property(drmModeAtomicReq *req, uint32_t obj_id,
-				const char *name, uint64_t value)
+static int add_plane_property(drmModeAtomicReq * req, uint32_t obj_id,
+			      const char *name, uint64_t value)
 {
 	struct plane *obj = drm.plane;
 	unsigned int i;
 	int prop_id = -1;
 
-	for (i = 0 ; i < obj->props->count_props ; i++) {
+	for (i = 0; i < obj->props->count_props; i++) {
 		if (strcmp(obj->props_info[i]->name, name) == 0) {
 			prop_id = obj->props_info[i]->prop_id;
 			break;
@@ -115,15 +115,16 @@ static int drm_atomic_commit(uint32_t fb_id, uint32_t flags)
 	req = drmModeAtomicAlloc();
 
 	if (flags & DRM_MODE_ATOMIC_ALLOW_MODESET) {
-		if (add_connector_property(req, drm.connector_id, "CRTC_ID",
-						drm.crtc_id) < 0)
-				return -1;
-
-		if (drmModeCreatePropertyBlob(drm.fd, drm.mode, sizeof(*drm.mode),
-					      &blob_id) != 0)
+		if (add_connector_property
+		    (req, drm.connector_id, "CRTC_ID", drm.crtc_id) < 0)
 			return -1;
 
-		if (add_crtc_property(req, drm.crtc_id, "MODE_ID", blob_id) < 0)
+		if (drmModeCreatePropertyBlob
+		    (drm.fd, drm.mode, sizeof(*drm.mode), &blob_id) != 0)
+			return -1;
+
+		if (add_crtc_property(req, drm.crtc_id, "MODE_ID", blob_id)
+		    < 0)
 			return -1;
 
 		if (add_crtc_property(req, drm.crtc_id, "ACTIVE", 1) < 0)
@@ -134,36 +135,49 @@ static int drm_atomic_commit(uint32_t fb_id, uint32_t flags)
 	add_plane_property(req, plane_id, "CRTC_ID", drm.crtc_id);
 	add_plane_property(req, plane_id, "SRC_X", 0);
 	add_plane_property(req, plane_id, "SRC_Y", 0);
-	add_plane_property(req, plane_id, "SRC_W", drm.mode->hdisplay << 16);
-	add_plane_property(req, plane_id, "SRC_H", drm.mode->vdisplay << 16);
+	add_plane_property(req, plane_id, "SRC_W",
+			   drm.mode->hdisplay << 16);
+	add_plane_property(req, plane_id, "SRC_H",
+			   drm.mode->vdisplay << 16);
 	add_plane_property(req, plane_id, "CRTC_X", 0);
 	add_plane_property(req, plane_id, "CRTC_Y", 0);
 	add_plane_property(req, plane_id, "CRTC_W", drm.mode->hdisplay);
 	add_plane_property(req, plane_id, "CRTC_H", drm.mode->vdisplay);
 
-	if (drm.kms_in_fence_fd != -1) {
-		add_crtc_property(req, drm.crtc_id, "OUT_FENCE_PTR",
-				VOID2U64(&drm.kms_out_fence_fd));
-		add_plane_property(req, plane_id, "IN_FENCE_FD", drm.kms_in_fence_fd);
-	}
 #if 1
-	drm.plane++;
-	plane_id = drm.plane->plane->plane_id;
+	if (drm.screen_num > 1) {
+		drm.plane++;
+		plane_id = drm.plane->plane->plane_id;
 
-	add_plane_property(req, plane_id, "FB_ID", fb_id);
-	add_plane_property(req, plane_id, "CRTC_ID", drm.crtc_ids[1]);
-	add_plane_property(req, plane_id, "SRC_X", 0);
-	add_plane_property(req, plane_id, "SRC_Y", 0);
-	add_plane_property(req, plane_id, "SRC_W", drm.mode->hdisplay << 16);
-	add_plane_property(req, plane_id, "SRC_H", drm.mode->vdisplay << 16);
-	add_plane_property(req, plane_id, "CRTC_X", 0);
-	add_plane_property(req, plane_id, "CRTC_Y", 0);
-	add_plane_property(req, plane_id, "CRTC_W", drm.mode->hdisplay);
-	add_plane_property(req, plane_id, "CRTC_H", drm.mode->vdisplay);
+		add_plane_property(req, plane_id, "FB_ID", fb_id);
+		add_plane_property(req, plane_id, "CRTC_ID",
+				   drm.crtc_ids[1]);
+		add_plane_property(req, plane_id, "SRC_X", 0);
+		add_plane_property(req, plane_id, "SRC_Y", 0);
+		add_plane_property(req, plane_id, "SRC_W",
+				   drm.mode->hdisplay << 16);
+		add_plane_property(req, plane_id, "SRC_H",
+				   drm.mode->vdisplay << 16);
+		add_plane_property(req, plane_id, "CRTC_X", 0);
+		add_plane_property(req, plane_id, "CRTC_Y", 0);
+		add_plane_property(req, plane_id, "CRTC_W",
+				   drm.mode->hdisplay);
+		add_plane_property(req, plane_id, "CRTC_H",
+				   drm.mode->vdisplay);
+
+	}
 
 	/* reset for next call */
 	drm.plane = drm.planes;
 #endif
+
+	/* FIXME: it is better to disabled it I don't want destrop memory at once */
+	if (drm.kms_in_fence_fd != -1) {
+		add_crtc_property(req, drm.crtc_ids[drm.screen_num - 1], "OUT_FENCE_PTR",
+				  VOID2U64(&drm.kms_out_fence_fd));
+		add_plane_property(req, plane_id, "IN_FENCE_FD",
+				   drm.kms_in_fence_fd);
+	}
 
 	ret = drmModeAtomicCommit(drm.fd, req, flags, NULL);
 	if (ret)
@@ -174,7 +188,7 @@ static int drm_atomic_commit(uint32_t fb_id, uint32_t flags)
 		drm.kms_in_fence_fd = -1;
 	}
 
-out:
+      out:
 	drmModeAtomicFree(req);
 
 	return ret;
@@ -187,7 +201,8 @@ static EGLSyncKHR create_fence(const struct egl *egl, int fd)
 		EGL_NONE,
 	};
 	EGLSyncKHR fence = egl->eglCreateSyncKHR(egl->display,
-			EGL_SYNC_NATIVE_FENCE_ANDROID, attrib_list);
+						 EGL_SYNC_NATIVE_FENCE_ANDROID,
+						 attrib_list);
 	assert(fence);
 	return fence;
 }
@@ -215,11 +230,12 @@ static int atomic_run(const struct gbm *gbm, const struct egl *egl)
 
 	while (i < drm.count) {
 		struct gbm_bo *next_bo;
-		EGLSyncKHR gpu_fence = NULL;   /* out-fence from gpu, in-fence to kms */
-		EGLSyncKHR kms_fence = NULL;   /* in-fence to gpu, out-fence from kms */
+		EGLSyncKHR gpu_fence = NULL;	/* out-fence from gpu, in-fence to kms */
+		EGLSyncKHR kms_fence = NULL;	/* in-fence to gpu, out-fence from kms */
 
 		if (drm.kms_out_fence_fd != -1) {
-			kms_fence = create_fence(egl, drm.kms_out_fence_fd);
+			kms_fence =
+			    create_fence(egl, drm.kms_out_fence_fd);
 			assert(kms_fence);
 
 			/* driver now has ownership of the fence fd: */
@@ -245,7 +261,8 @@ static int atomic_run(const struct gbm *gbm, const struct egl *egl)
 		/* insert fence to be singled in cmdstream.. this fence will be
 		 * signaled when gpu rendering done
 		 */
-		gpu_fence = create_fence(egl, EGL_NO_NATIVE_FENCE_FD_ANDROID);
+		gpu_fence =
+		    create_fence(egl, EGL_NO_NATIVE_FENCE_FD_ANDROID);
 		assert(gpu_fence);
 
 		eglSwapBuffers(egl->display, egl->surface);
@@ -253,7 +270,9 @@ static int atomic_run(const struct gbm *gbm, const struct egl *egl)
 		/* after swapbuffers, gpu_fence should be flushed, so safe
 		 * to get fd:
 		 */
-		drm.kms_in_fence_fd = egl->eglDupNativeFenceFDANDROID(egl->display, gpu_fence);
+		drm.kms_in_fence_fd =
+		    egl->eglDupNativeFenceFDANDROID(egl->display,
+						    gpu_fence);
 		egl->eglDestroySyncKHR(egl->display, gpu_fence);
 		assert(drm.kms_in_fence_fd != -1);
 
@@ -277,10 +296,10 @@ static int atomic_run(const struct gbm *gbm, const struct egl *egl)
 			 * whilst the previous one is still pending.
 			 */
 			do {
-				status = egl->eglClientWaitSyncKHR(egl->display,
-								   kms_fence,
-								   0,
-								   EGL_FOREVER_KHR);
+				status =
+				    egl->eglClientWaitSyncKHR(egl->display,
+							      kms_fence, 0,
+							      EGL_FOREVER_KHR);
 			} while (status != EGL_CONDITION_SATISFIED_KHR);
 
 			egl->eglDestroySyncKHR(egl->display, kms_fence);
@@ -289,18 +308,19 @@ static int atomic_run(const struct gbm *gbm, const struct egl *egl)
 		cur_time = get_time_ns();
 		if (cur_time > (report_time + 2 * NSEC_PER_SEC)) {
 			double elapsed_time = cur_time - start_time;
-			double secs = elapsed_time / (double)NSEC_PER_SEC;
-			unsigned frames = i - 1;  /* first frame ignored */
+			double secs = elapsed_time / (double) NSEC_PER_SEC;
+			unsigned frames = i - 1;	/* first frame ignored */
 			printf("Rendered %u frames in %f sec (%f fps)\n",
-				frames, secs, (double)frames/secs);
+			       frames, secs, (double) frames / secs);
 			report_time = cur_time;
 		}
 
 		/* Check for user input: */
 		struct pollfd fdset[] = { {
-			.fd = STDIN_FILENO,
-			.events = POLLIN,
-		} };
+					   .fd = STDIN_FILENO,
+					   .events = POLLIN,
+					   }
+		};
 		ret = poll(fdset, ARRAY_SIZE(fdset), 0);
 		if (ret > 0) {
 			printf("user interrupted!\n");
@@ -330,10 +350,10 @@ static int atomic_run(const struct gbm *gbm, const struct egl *egl)
 
 	cur_time = get_time_ns();
 	double elapsed_time = cur_time - start_time;
-	double secs = elapsed_time / (double)NSEC_PER_SEC;
-	unsigned frames = i - 1;  /* first frame ignored */
+	double secs = elapsed_time / (double) NSEC_PER_SEC;
+	unsigned frames = i - 1;	/* first frame ignored */
 	printf("Rendered %u frames in %f sec (%f fps)\n",
-		frames, secs, (double)frames/secs);
+	       frames, secs, (double) frames / secs);
 
 	dump_perfcntrs(frames, elapsed_time);
 
@@ -355,31 +375,37 @@ static int get_plane_id(void)
 
 	plane_resources = drmModeGetPlaneResources(drm.fd);
 	if (!plane_resources) {
-		printf("drmModeGetPlaneResources failed: %s\n", strerror(errno));
+		printf("drmModeGetPlaneResources failed: %s\n",
+		       strerror(errno));
 		return -1;
 	}
 
-	for (i = 0; (i < plane_resources->count_planes) && !found_primary; i++) {
+	for (i = 0; (i < plane_resources->count_planes) && !found_primary;
+	     i++) {
 		uint32_t id = plane_resources->planes[i];
 		drmModePlanePtr plane = drmModeGetPlane(drm.fd, id);
 		if (!plane) {
-			printf("drmModeGetPlane(%u) failed: %s\n", id, strerror(errno));
+			printf("drmModeGetPlane(%u) failed: %s\n", id,
+			       strerror(errno));
 			continue;
 		}
 
 		if (plane->possible_crtcs & (1 << drm.crtc_index)) {
 			drmModeObjectPropertiesPtr props =
-				drmModeObjectGetProperties(drm.fd, id, DRM_MODE_OBJECT_PLANE);
+			    drmModeObjectGetProperties(drm.fd, id,
+						       DRM_MODE_OBJECT_PLANE);
 
 			/* primary or not, this plane is good enough to use: */
 			ret = id;
 
 			for (j = 0; j < props->count_props; j++) {
 				drmModePropertyPtr p =
-					drmModeGetProperty(drm.fd, props->props[j]);
+				    drmModeGetProperty(drm.fd,
+						       props->props[j]);
 
 				if ((strcmp(p->name, "type") == 0) &&
-						(props->prop_values[j] == DRM_PLANE_TYPE_PRIMARY)) {
+				    (props->prop_values[j] ==
+				     DRM_PLANE_TYPE_PRIMARY)) {
 					/* found our primary plane, lets use that: */
 					found_primary = 1;
 				}
@@ -398,12 +424,14 @@ static int get_plane_id(void)
 	return ret;
 }
 
-const struct drm * init_drm_atomic(const char *device, const char *mode_str,
-		unsigned int vrefresh, unsigned int count, uint8_t screen_num)
+const struct drm *init_drm_atomic(const char *device, const char *mode_str,
+				  unsigned int vrefresh,
+				  unsigned int count, uint8_t screen_num)
 {
 	uint32_t plane_id;
 	uint32_t plane_ids[3];
 	int ret;
+	int j;
 
 	drm.screen_num = screen_num;
 
@@ -413,20 +441,21 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 
 	ret = drmSetClientCap(drm.fd, DRM_CLIENT_CAP_ATOMIC, 1);
 	if (ret) {
-		printf("no atomic modesetting support: %s\n", strerror(errno));
+		printf("no atomic modesetting support: %s\n",
+		       strerror(errno));
 		return NULL;
 	}
 
-	for (int i = 0; i < 3; i++) {
-	drm.crtc_index = drm.crtc_indexes[i];
-	ret = get_plane_id();
-	if (!ret) {
-		printf("could not find a suitable plane\n");
-		return NULL;
-	} else {
-		plane_id = ret;
-	}
-	plane_ids [i] = plane_id;
+	for (j = 0; j < screen_num; j++) {
+		drm.crtc_index = drm.crtc_indexes[j];
+		ret = get_plane_id();
+		if (!ret) {
+			printf("could not find a suitable plane\n");
+			return NULL;
+		} else {
+			plane_id = ret;
+		}
+		plane_ids[j] = plane_id;
 	}
 	drm.crtc_index = drm.crtc_indexes[0];
 
@@ -440,13 +469,18 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 	drm.connector = calloc(1, sizeof(*drm.connector));
 #endif
 
-	drm.planes = (struct plane *)calloc(3, sizeof(*drm.plane));
-	drm.crtcs = (struct crtc *)calloc(3, sizeof(*drm.crtc));
-	drm.connectors = (struct connector *)calloc(3, sizeof(*drm.connector));
+	drm.planes =
+	    (struct plane *) calloc(screen_num, sizeof(*drm.plane));
+	drm.crtcs = (struct crtc *) calloc(screen_num, sizeof(*drm.crtc));
+	drm.connectors =
+	    (struct connector *) calloc(screen_num,
+					sizeof(*drm.connector));
 
 	drm.plane = drm.planes;
 	drm.crtc = drm.crtcs;
 	drm.connector = drm.connectors;
+
+	for (j = 0; j < screen_num; j++) {
 
 #define get_resource(type, Type, id) do { 					\
 		drm.type->type = drmModeGet##Type(drm.fd, id);			\
@@ -457,27 +491,10 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 		}								\
 	} while (0)
 
-	get_resource(plane, Plane, plane_ids[0]);
-	get_resource(crtc, Crtc, drm.crtc_ids[0]);
-	get_resource(connector, Connector, drm.connector_ids[0]);
 
-	drm.plane++;
-	drm.crtc++;
-	drm.connector++;
-	get_resource(plane, Plane, plane_ids[1]);
-	get_resource(crtc, Crtc, drm.crtc_ids[1]);
-	get_resource(connector, Connector, drm.connector_ids[2]);
-
-	drm.plane++;
-	drm.crtc++;
-	drm.connector++;
-	get_resource(plane, Plane, plane_ids[2]);
-	get_resource(crtc, Crtc, drm.crtc_ids[2]);
-	get_resource(connector, Connector, drm.connector_ids[2]);
-
-	drm.connector = drm.connectors;
-	drm.crtc = drm.crtcs;
-	drm.plane = drm.planes;
+		get_resource(plane, Plane, plane_ids[j]);
+		get_resource(crtc, Crtc, drm.crtc_ids[j]);
+		get_resource(connector, Connector, drm.connector_ids[j]);
 
 #define get_properties(type, TYPE, id) do {					\
 		uint32_t i;							\
@@ -495,30 +512,19 @@ const struct drm * init_drm_atomic(const char *device, const char *mode_str,
 					drm.type->props->props[i]);		\
 		}								\
 	} while (0)
+		get_properties(crtc, CRTC, drm.crtc_ids[j]);
+		get_properties(plane, PLANE, plane_ids[j]);
+		get_properties(connector, CONNECTOR, drm.connector_ids[j]);
 
-	get_properties(crtc, CRTC, drm.crtc_ids[0]);
-	get_properties(plane, PLANE, plane_ids[0]);
-	get_properties(connector, CONNECTOR, drm.connector_ids[0]);
 
-	drm.plane++;
-	drm.crtc++;
-	drm.connector++;
+		drm.plane++;
+		drm.crtc++;
+		drm.connector++;
+	}
 
-	get_properties(crtc, CRTC, drm.crtc_ids[1]);
-	get_properties(plane, PLANE, plane_ids[1]);
-	get_properties(connector, CONNECTOR, drm.connector_ids[1]);
-
-	drm.plane++;
-	drm.crtc++;
-	drm.connector++;
-
-	get_properties(crtc, CRTC, drm.crtc_ids[2]);
-	get_properties(plane, PLANE, plane_ids[2]);
-	get_properties(connector, CONNECTOR, drm.connector_ids[2]);
-
-	drm.plane = drm.planes;
-	drm.crtc = drm.crtcs;
 	drm.connector = drm.connectors;
+	drm.crtc = drm.crtcs;
+	drm.plane = drm.planes;
 
 	drm.run = atomic_run;
 
