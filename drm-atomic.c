@@ -146,6 +146,24 @@ static int drm_atomic_commit(uint32_t fb_id, uint32_t flags)
 				VOID2U64(&drm.kms_out_fence_fd));
 		add_plane_property(req, plane_id, "IN_FENCE_FD", drm.kms_in_fence_fd);
 	}
+#if 1
+	drm.plane++;
+	plane_id = drm.plane->plane->plane_id;
+
+	add_plane_property(req, plane_id, "FB_ID", fb_id);
+	add_plane_property(req, plane_id, "CRTC_ID", drm.crtc_ids[1]);
+	add_plane_property(req, plane_id, "SRC_X", 0);
+	add_plane_property(req, plane_id, "SRC_Y", 0);
+	add_plane_property(req, plane_id, "SRC_W", drm.mode->hdisplay << 16);
+	add_plane_property(req, plane_id, "SRC_H", drm.mode->vdisplay << 16);
+	add_plane_property(req, plane_id, "CRTC_X", 0);
+	add_plane_property(req, plane_id, "CRTC_Y", 0);
+	add_plane_property(req, plane_id, "CRTC_W", drm.mode->hdisplay);
+	add_plane_property(req, plane_id, "CRTC_H", drm.mode->vdisplay);
+
+	/* reset for next call */
+	drm.plane = drm.planes;
+#endif
 
 	ret = drmModeAtomicCommit(drm.fd, req, flags, NULL);
 	if (ret)
