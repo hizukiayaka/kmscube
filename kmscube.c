@@ -41,7 +41,7 @@ static const struct egl *egl;
 static const struct gbm *gbm;
 static const struct drm *drm;
 
-static const char *shortopts = "Ac:D:f:M:m:p:S:s:V:v:";
+static const char *shortopts = "Ac:D:f:M:m:p:S:s:V:v:n:";
 
 static const struct option longopts[] = {
 	{"atomic", no_argument,       0, 'A'},
@@ -54,6 +54,7 @@ static const struct option longopts[] = {
 	{"samples",  required_argument, 0, 's'},
 	{"video",  required_argument, 0, 'V'},
 	{"vmode",  required_argument, 0, 'v'},
+	{"screen", required_argument, 0, 'n'},
 	{0, 0, 0, 0}
 };
 
@@ -100,6 +101,7 @@ int main(int argc, char *argv[])
 	unsigned int len;
 	unsigned int vrefresh = 0;
 	unsigned int count = ~0;
+	unsigned long screen_num = 0;
 
 #ifdef HAVE_GST
 	gst_init(&argc, &argv);
@@ -177,6 +179,9 @@ int main(int argc, char *argv[])
 			strncpy(mode_str, optarg, len);
 			mode_str[len] = '\0';
 			break;
+		case 'n':
+			screen_num = strtoul(optarg, NULL, 0);
+			break;
 		default:
 			usage(argv[0]);
 			return -1;
@@ -184,7 +189,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (atomic)
-		drm = init_drm_atomic(device, mode_str, vrefresh, count);
+		drm = init_drm_atomic(device, mode_str, vrefresh, count, (uint8_t) screen_num);
 	else
 		drm = init_drm_legacy(device, mode_str, vrefresh, count);
 	if (!drm) {
